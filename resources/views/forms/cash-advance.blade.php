@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
- {{--Test Comment--}}
+ {{--Test Commen--}}
 
 @section('content')
 <!DOCTYPE html>
