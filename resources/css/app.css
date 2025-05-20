@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional font override */
+body {
+    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
