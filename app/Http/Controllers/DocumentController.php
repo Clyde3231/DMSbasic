@@ -115,7 +115,7 @@ public function show(Document $document)
     // dd($document->toArray(), $formData, $documentType); // First check: Is document and its data loaded?
 
     $viewName = match ($documentType) {
-        'pull_out_receipt' => 'forms.pullout',
+        
         'purchase_request' => 'forms.purchase-request',
         // ... other cases
         default => null,
