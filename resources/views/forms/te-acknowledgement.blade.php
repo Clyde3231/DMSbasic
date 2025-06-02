@@ -1,4 +1,5 @@
 
+
 @extends('layouts.app')
 
 {{--Test Commen--}}
@@ -9,26 +10,24 @@
     deliveredTo: '',
     address: '',
     attention: '',
-    date: new Date().toISOString().slice(0,10),
+    date: 'Sunday, May 18, 2025', // Pre-filled as per image
     refPoNo: '',
     items: [
-        { quantity: null, unit: '', particulars: '', serialNumber: '' },
-        { quantity: null, unit: '', particulars: '', serialNumber: '' } // Start with a couple of rows as per image
+        { quantity: null, unit: '', brandParticulars: '', model: '', partSerialNumber: '' },
+        { quantity: null, unit: '', brandParticulars: '', model: '', partSerialNumber: '' } // Start with two rows
     ],
     remarks: '',
     addItem() {
-        this.items.push({ quantity: null, unit: '', particulars: '', serialNumber: '' });
+        this.items.push({ quantity: null, unit: '', brandParticulars: '', model: '', partSerialNumber: '' });
     },
     removeItem(index) {
-        if (this.items.length > 1) {
-            this.items.splice(index, 1);
-        }
+        this.items.splice(index, 1);
     }
 }" x-cloak>
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Delivery Receipt</title>
+    <title>Tools/Equipment Receipt</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,6 +50,14 @@
             ring: 0;
             border-bottom-color: #2563eb; /* blue-600 */
         }
+        .input-underline-static { /* For pre-filled Date */
+            border: none;
+            border-bottom: 1px solid black;
+            padding-top: 0.125rem;
+            padding-bottom: 0.125rem;
+            font-size: 0.875rem; /* text-sm */
+            background-color: #f9fafb; /* gray-50 if readonly */
+        }
         .table-header-cell {
             background-color: #f9fafb; /* gray-50 */
             font-weight: bold;
@@ -64,19 +71,19 @@
             border: 1px solid black;
             vertical-align: top;
         }
-        .table-cell-input {
+        .table-cell-input { /* For single-line inputs in table */
             width: 100%;
             height: 100%;
             padding: 0.5rem;
             border: none;
             font-size: 0.875rem;
             box-sizing: border-box;
-            min-height: 40px; /* Minimum height for input cells */
+            min-height: 60px; /* Taller cells */
         }
         .table-cell-input:focus {
             outline: none;
         }
-        .table-cell-textarea {
+        .table-cell-textarea { /* For multi-line inputs in table */
             width: 100%;
             height: 100%;
             padding: 0.5rem;
@@ -84,19 +91,19 @@
             font-size: 0.875rem;
             box-sizing: border-box;
             resize: none;
-            min-height: 40px; /* Minimum height for textarea cells */
+            min-height: 60px; /* Taller cells */
         }
         .signature-line {
             border-bottom: 1px solid black;
-            height: 1.5rem; /* approx 24px */
-            margin-top: 0.25rem; /* mt-1 */
+            height: 1.5rem;
+            margin-top: 0.25rem;
         }
     </style>
 </head>
 <body class="bg-[#F0F0F0] font-sans min-h-screen flex flex-col">
 
     <div class="bg-[#6FFFA0] w-full px-6 py-2 flex justify-between items-center">
-        <div></div> <!-- Placeholder for logo or title if needed -->
+        <div></div>
         <div class="text-right text-sm text-black">
             <div class="font-semibold">Username</div>
             <div class="text-xs text-gray-700">user@example.com</div>
@@ -107,7 +114,7 @@
 
         <div class="flex-1 overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-white">
-                <h1 class="text-xl font-semibold text-gray-800">Delivery Receipt</h1>
+                <h1 class="text-xl font-semibold text-gray-800">Tools/Equipment Receipt</h1>
                 <div class="flex space-x-2">
                     <button class="text-sm bg-[#FFA500] text-white px-4 py-2 rounded hover:bg-[#FF8500] transition duration-300">Send</button>
                     <button class="text-sm bg-[#808080] text-white px-4 py-2 rounded hover:bg-[#606060] transition duration-300">Save</button>
@@ -120,63 +127,68 @@
 
                     <form class="space-y-6">
                         <!-- Header Section: Delivery Info -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                            <div class="space-y-2">
-                                <div class="flex items-center">
-                                    <label class="w-28 font-semibold uppercase">DELIVERED TO:</label>
-                                    <input type="text" x-model="deliveredTo" class="input-underline flex-1">
+                        <div class="border border-black p-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                <div class="space-y-2">
+                                    <div class="flex items-center">
+                                        <label class="w-28 font-semibold uppercase">DELIVERED TO:</label>
+                                        <input type="text" x-model="deliveredTo" class="input-underline flex-1">
+                                    </div>
+                                    <div class="flex items-center">
+                                        <label class="w-28 font-semibold uppercase">ADDRESS:</label>
+                                        <input type="text" x-model="address" class="input-underline flex-1">
+                                    </div>
+                                    <div class="flex items-center">
+                                        <label class="w-28 font-semibold uppercase">ATTENTION:</label>
+                                        <input type="text" x-model="attention" class="input-underline flex-1">
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <label class="w-28 font-semibold uppercase">ADDRESS:</label>
-                                    <input type="text" x-model="address" class="input-underline flex-1">
-                                </div>
-                                <div class="flex items-center">
-                                    <label class="w-28 font-semibold uppercase">ATTENTION:</label>
-                                    <input type="text" x-model="attention" class="input-underline flex-1">
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <div class="flex items-center">
-                                    <label class="w-28 font-semibold uppercase">DATE:</label>
-                                    <input type="date" x-model="date" class="input-underline flex-1">
-                                </div>
-                                <div class="flex items-center">
-                                    <label class="w-28 font-semibold uppercase">REF/PO NO:</label>
-                                    <input type="text" x-model="refPoNo" class="input-underline flex-1">
+                                <div class="space-y-2">
+                                    <div class="flex items-center">
+                                        <label class="w-28 font-semibold uppercase">DATE:</label>
+                                        <input type="text" x-model="date" class="input-underline-static flex-1" readonly>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <label class="w-28 font-semibold uppercase">REF/PO NO:</label>
+                                        <input type="text" x-model="refPoNo" class="input-underline flex-1">
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Items Table Section -->
-                        <div class="mt-6 border-2 border-black">
+                        <div class="border-2 border-black"> <!-- Ensures its own full border -->
                             <!-- Table Headers -->
                             <div class="grid grid-cols-12">
                                 <div class="col-span-2 table-header-cell">QUANTITY</div>
                                 <div class="col-span-1 table-header-cell">UNIT</div>
-                                <div class="col-span-6 table-header-cell">BRAND/PARTICULARS</div>
+                                <div class="col-span-4 table-header-cell">BRAND/PARTICULARS</div>
+                                <div class="col-span-2 table-header-cell">MODEL</div>
                                 <div class="col-span-3 table-header-cell">PART/SERIAL NUMBER</div>
                             </div>
                             <!-- Table Rows -->
                             <template x-for="(item, index) in items" :key="index">
                                 <div class="grid grid-cols-12 relative">
                                     <div class="col-span-2 table-data-cell">
-                                        <input type="number" x-model.number="item.quantity" class="table-cell-input text-center" placeholder="0">
+                                        <textarea x-model.number="item.quantity" class="table-cell-textarea text-center" placeholder="0"></textarea>
                                     </div>
                                     <div class="col-span-1 table-data-cell">
-                                        <input type="text" x-model="item.unit" class="table-cell-input text-center">
+                                        <textarea x-model="item.unit" class="table-cell-textarea text-center"></textarea>
                                     </div>
-                                    <div class="col-span-6 table-data-cell">
-                                        <textarea x-model="item.particulars" class="table-cell-textarea"></textarea>
+                                    <div class="col-span-4 table-data-cell">
+                                        <textarea x-model="item.brandParticulars" class="table-cell-textarea"></textarea>
+                                    </div>
+                                    <div class="col-span-2 table-data-cell">
+                                        <textarea x-model="item.model" class="table-cell-textarea"></textarea>
                                     </div>
                                     <div class="col-span-3 table-data-cell">
-                                        <textarea x-model="item.serialNumber" class="table-cell-textarea"></textarea>
+                                        <textarea x-model="item.partSerialNumber" class="table-cell-textarea"></textarea>
                                     </div>
-                                    <button type="button" @click="removeItem(index)" x-show="items.length > 1"
+                                    <button type="button" @click="removeItem(index)"
                                         class="absolute top-1/2 -translate-y-1/2 -right-6 bg-red-500 hover:bg-red-700 text-white font-bold text-[10px] rounded-full p-0 w-5 h-5 flex items-center justify-center leading-none transition duration-150"
                                         title="Remove item">×</button>
                                 </div>
                             </template>
-                             <!-- Add Item Button - positioned inside the border structure but after items -->
                             <div class="p-2 border-t border-black flex justify-end">
                                 <button type="button" @click="addItem()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Add Item</button>
                             </div>
@@ -192,24 +204,32 @@
 
                         <!-- Received Confirmation -->
                         <div class="text-center text-sm italic mt-4 py-2">
-                            Received the above merchandise in good order and condition
+                            Received the above tools/equipments in good order and condition
                         </div>
 
                         <!-- Signatures Section -->
                         <div class="mt-8 pt-6 grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8 text-sm">
-                            <div class="space-y-10">
-                                <div>
-                                    <p class="uppercase font-semibold text-gray-600">Prepared By</p>
-                                    <div class="signature-line"></div>
+                            <div class="md:col-span-2 space-y-10">
+                                <div class="grid grid-cols-2 gap-x-8">
+                                    <div>
+                                        <p class="uppercase font-semibold text-gray-600">Prepared By</p>
+                                        <div class="signature-line"></div>
+                                    </div>
+                                    <div>
+                                        <p class="uppercase font-semibold text-gray-600">Checked By</p>
+                                        <div class="signature-line"></div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="uppercase font-semibold text-gray-600">Approved By</p>
-                                    <div class="signature-line"></div>
+                                <div class="grid grid-cols-2 gap-x-8">
+                                    <div>
+                                        <p class="uppercase font-semibold text-gray-600">Acknowledged By</p>
+                                        <div class="signature-line"></div>
+                                    </div>
+                                    <div>
+                                        <p class="uppercase font-semibold text-gray-600">Delivered By</p>
+                                        <div class="signature-line"></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <p class="uppercase font-semibold text-gray-600">Delivered By</p>
-                                <div class="signature-line"></div>
                             </div>
                             <div class="space-y-2">
                                  <div class="flex items-end">
@@ -224,15 +244,11 @@
                             </div>
                         </div>
 
-                        <!-- Form Number Footer -->
-                        <div class="mt-12 pt-8 text-center">
-                            <p class="text-lg font-bold text-gray-800">Form No. ADM-PCH-004</p>
-                        </div>
 
                         <!-- Submit Button -->
-                        <div class="pt-8">
+                        <div class="pt-12">
                             <button type="submit" class="bg-[#2D73C5] hover:bg-[#214d91] text-white font-bold py-3 px-6 rounded w-full transition duration-300 text-sm uppercase tracking-wider">
-                                Submit Delivery Receipt
+                                Submit Receipt
                             </button>
                         </div>
                     </form>
@@ -244,10 +260,9 @@
         <div class="w-64 bg-[#1A3D8A] text-white p-6 flex-shrink-0 hidden md:block">
             <h2 class="text-lg font-bold mb-4">Other Form Types</h2>
             <div class="space-y-4">
+                <a href="#" class="block bg-[#20D760] hover:bg-[#16a046] text-white font-semibold px-4 py-2 rounded text-left text-sm transition duration-150">Delivery Receipt</a>
                 <a href="#" class="block bg-[#20D760] hover:bg-[#16a046] text-white font-semibold px-4 py-2 rounded text-left text-sm transition duration-150">Purchase Order</a>
                 <a href="#" class="block bg-[#20D760] hover:bg-[#16a046] text-white font-semibold px-4 py-2 rounded text-left text-sm transition duration-150">Purchase Request</a>
-                <a href="#" class="block bg-[#20D760] hover:bg-[#16a046] text-white font-semibold px-4 py-2 rounded text-left text-sm transition duration-150">Reimbursement</a>
-                <a href="#" class="block bg-[#20D760] hover:bg-[#16a046] text-white font-semibold px-4 py-2 rounded text-left text-sm transition duration-150">Request for Payment</a>
             </div>
         </div>
     </div>
