@@ -3,8 +3,10 @@
 use Illuminate\Support\Facades\Route;
 // It's good practice to group controller imports
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\FormController;
+use App\Http\Controllers\ReimbursementController;
+use App\Http\Controllers\CashAdvanceController;
 use App\Http\Controllers\PulloutController; // Assuming this is where downloadExcel is
+use App\Http\Controllers\PurchaseRequestController;
 // use App\Http\Controllers\FormController; // If you had another one
 
 /*
@@ -52,7 +54,10 @@ Route::prefix('forms')->name('forms.')->group(function () {
 
 // Excel Download Route (specific to pullout form data)
 Route::post('/pullout/download-excel', [PulloutController::class, 'downloadExcel'])->name('form.download.excel');
-
-// Authentication routes (e.g., from Breeze or Jetstream) would typically be here or included
+Route::post('/forms/cash-advance/download-excel', [CashAdvanceController::class, 'downloadCashAdvanceExcel'])->name('forms.cash-advance.download.excel');
+Route::post('/forms/reimbursement/download-excel', [ReimbursementController::class, 'downloadExcel'])->name('forms.reimbursement.download.excel');
+Route::post('/forms/purchase-request/download-excel', [PurchaseRequestController::class, 'downloadPurchaseRequestExcel'])->name('forms.purchase-request.download.excel');// Authentication routes (e.g., from Breeze or Jetstream) would typically be here or included
 // require __DIR__.'/auth.php';
 Route::resource('documents', DocumentController::class);
+
+
