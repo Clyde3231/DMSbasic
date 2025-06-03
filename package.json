@@ -6,13 +6,15 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/vite": "^4.0.0",
-        "autoprefixer": "^10.4.14",
+        "alpinejs": "^3.14.9",
+        "autoprefixer": "^10.4.21",
         "axios": "^1.8.2",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^1.2.0",
-        "postcss": "^8.4.24",
-        "tailwindcss": "^3.3.5",
+        "postcss": "^8.5.4",
+        "tailwindcss": "^3.4.17",
         "vite": "^6.2.4"
     },
     "name": "document-management",
@@ -23,7 +25,6 @@
         "test": "tests"
     },
     "dependencies": {
-        "alpinejs": "^3.14.9",
         "ansi-regex": "^5.0.1",
         "ansi-styles": "^4.3.0",
         "asynckit": "^0.4.0",
@@ -36,6 +37,7 @@
         "color-convert": "^2.0.1",
         "color-name": "^1.1.4",
         "combined-stream": "^1.0.8",
+        "composer": "^4.1.0",
         "delayed-stream": "^1.0.0",
         "detect-libc": "^2.0.4",
         "dunder-proto": "^1.0.1",
