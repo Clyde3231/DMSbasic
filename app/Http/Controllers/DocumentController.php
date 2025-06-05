@@ -169,6 +169,25 @@ public function show(Document $document)
         ]);
     }
 
+// In app/Http/Controllers/DocumentController.php
+// In app/Http/Controllers/DocumentController.php
+public function updateStatus(Request $request, Document $document)
+{
+    $validated = $request->validate([
+        'status' => 'required|string|in:draft,sent,signed,archived', // Add all your valid statuses
+    ]);
+
+    // Optional: Add authorization logic here if needed
+
+    $document->status = $validated['status'];
+    $document->save();
+
+    return response()->json([
+        'message' => 'Document status updated successfully!',
+        'new_status' => $document->status,
+        'document' => $document->fresh() // Send back the updated document
+    ]);
+}
     /**
      * Update the specified resource in storage.
      */
@@ -217,3 +236,5 @@ public function show(Document $document)
         return redirect()->route('documents.index')->with('success', 'Document deleted successfully!');
     }
 }
+
+
