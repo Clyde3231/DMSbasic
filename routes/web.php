@@ -8,6 +8,7 @@ use App\Http\Controllers\CashAdvanceController;
 use App\Http\Controllers\PulloutController; // Assuming this is where downloadExcel is
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\RequestForPaymentController; // Add this if new controller
+use App\Http\Controllers\AcknowledgementReceiptController; // Add this if new controller
 // use App\Http\Controllers\FormController; // If you had another one
 
 /*
@@ -43,12 +44,12 @@ Route::prefix('forms')->name('forms.')->group(function () {
     Route::view('/reimbursement', 'forms.reimbursement')->name('reimbursement');
     Route::view('/purchase-request', 'forms.purchase-request')->name('purchase-request');
     Route::view('/request-payment', 'forms.request-payment')->name('request-payment');
-    Route::view('/acknowledgement-receipt', 'forms.acknowledgment-receipt')->name('acknowledgment-receipt');
+    Route::view('/acknowledgement-receipt', 'forms.acknowledgement-receipt')->name('acknowledgement-receipt');
     Route::view('/commission-incentiverequest', 'forms.commission-incentiverequest')->name('commission-incentiverequest');
     Route::view('/delivery-receipt', 'forms.delivery-receipt')->name('delivery-receipt');
     Route::view('/purchase-order', 'forms.purchase-order')->name('purchase-order');
     Route::view('/delivery-checklist', 'forms.delivery-checklist')->name('delivery-checklist');
-    Route::view('/te-acknowledgement', 'forms.te-acknowledgement')->name('te-acknowledgement');
+    Route::view('/te-acknowledgeement', 'forms.te-acknowledgement')->name('te-acknowledgement');
     Route::view('/borrow-receipt', 'forms.borrow-receipt')->name('borrow-receipt');
    
 });
@@ -59,6 +60,7 @@ Route::post('/forms/cash-advance/download-excel', [CashAdvanceController::class,
 Route::post('/forms/reimbursement/download-excel', [ReimbursementController::class, 'downloadExcel'])->name('forms.reimbursement.download.excel');
 Route::post('/forms/purchase-request/download-excel', [PurchaseRequestController::class, 'downloadPurchaseRequestExcel'])->name('forms.purchase-request.download.excel');// Authentication routes (e.g., from Breeze or Jetstream) would typically be here or included
 Route::post('/forms/request-for-payment/download-excel', [RequestForPaymentController::class, 'downloadRequestForPaymentExcel'])->name('forms.request-for-payment.download.excel');
+Route::post('/forms/acknowledgement-receipt/download-excel', [AcknowledgementReceiptController::class, 'downloadCurrentAcknowledgementReceiptExcel'])->name('forms.acknowledgement-receipt.download.excel');
 // require __DIR__.'/auth.php';
 Route::resource('documents', DocumentController::class);
 
@@ -82,6 +84,8 @@ Route::prefix('documents/{document}')->group(function () { // {document} will be
 
     // Request for Payment
     Route::get('/download-request-for-payment', [RequestForPaymentController::class, 'downloadSavedRequestForPaymentExcel'])->name('documents.download.request-for-payment');
+
+    Route::get('/documents/{document}/download-acknowledgement-receipt', [AcknowledgementReceiptController::class, 'downloadSavedAcknowledgementReceiptExcel'])->name('documents.download.acknowledgement-receipt');
 
     // --- ADD ROUTES FOR ALL OTHER DOCUMENT TYPES ---
     // Example for Reimbursement (assuming ReimbursementController and method)

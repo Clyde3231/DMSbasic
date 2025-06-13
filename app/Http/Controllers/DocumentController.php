@@ -63,7 +63,7 @@ public function index(Request $request)
         $validatedData = $request->validate([
             'document_name' => 'required|string|max:255',
             // Add 'reimbursement' to the 'in' validation rule
-            'document_type' => 'required|string|in:pull_out_receipt,purchase_request,cash_advance,reimbursement',
+            'document_type' => 'required|string|in:pull_out_receipt,purchase_request,cash_advance,reimbursement,request_for_payment,acknowledgement_receipt',
             'recipient' => 'nullable|string|max:255',
             'status' => 'nullable|string|in:draft,sent,signed,archived', // Added archived
             'data' => 'required|array',
@@ -108,6 +108,8 @@ public function show(Document $document)
         'purchase_request' => 'forms.purchase-request',
         'cash_advance' => 'forms.cash-advance',
         'reimbursement' => 'forms.reimbursement',
+        'request_for_payment' => 'forms.request-payment',
+        'acknowledgement_receipt' => 'forms.acknowledgement-receipt',
         // ... other cases
         default => null,
     };
@@ -152,7 +154,9 @@ public function show(Document $document)
             'purchase_request' => 'forms.purchase-request',
             'cash_advance' => 'forms.cash-advance',
             'reimbursement' => 'forms.reimbursement',
-            // Add all your document types
+            'request_for_payment' => 'forms.request-payment',
+            'acknowledgement_receipt' => 'forms.acknowledgement-receipt',
+            // Add all your document types]
             default => null,
         };
 

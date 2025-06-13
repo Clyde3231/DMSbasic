@@ -42,6 +42,7 @@
 
 @section('content')
 <!DOCTYPE html>
+{{-- Updated x-data call to use the global function and pass URLs --}}
 <html lang="en" x-data="requestPaymentForm(
     {{ $isEditMode ? 'true' : 'false' }},
     {{ $initialDocumentId ?? 'null' }},
@@ -62,9 +63,13 @@
     '{{ addslashes($initialPaymentDescription) }}',
     {{ $initialPaymentAmount ?? 'null' }},
     '{{ addslashes($initialPaymentCurrency) }}',
-    {{ json_encode($initialPaymentMethods) }},
+    {{ json_encode($initialPaymentMethods) }}, // Ensure this is passed as a valid JSON array string
     '{{ addslashes($initialPaymentInvoiceRef) }}',
-    '{{ addslashes($initialSignatureData) }}'
+    '{{ addslashes($initialSignatureData) }}',
+    // Pass URLs:
+    '{{ route("forms.request-for-payment.download.excel") }}', {{-- ENSURE THIS ROUTE EXISTS --}}
+    '{{ route("documents.store") }}',
+    '{{ route("documents.index") }}'
 )" x-cloak>
 <head>
     <meta charset="UTF-8" />
@@ -201,170 +206,6 @@
 
    
 
-<script>
-function requestPaymentForm(
-    isEditMode = false,
-    documentId = null,
-    initialDocTitle = '',
-    initialEmployeeName = '', initialEmployeeNum = '', initialDepartment = '', initialPosition = '',
-    initialDateFiled = new Date().toISOString().slice(0,10), initialReferenceNo = 'RFPF-',
-    initialPayeeName = '', initialPayeeAddress = '', initialPayeeContact = '',
-    initialBankName = '', initialAccountNumber = '', initialSwiftBic = '', initialIban = '',
-    initialPaymentDescription = '', initialPaymentAmount = null, initialPaymentCurrency = 'PHP',
-    initialPaymentMethods = [], initialPaymentInvoiceRef = '',
-    initialSignatureData = ''
-) {
-    return {
-        isEdit: isEditMode,
-        docId: documentId,
-        documentTitle: initialDocTitle,
-        employeeName: initialEmployeeName, employeeNum: initialEmployeeNum, department: initialDepartment, position: initialPosition,
-        dateFiled: initialDateFiled, referenceNo: initialReferenceNo,
-        payeeName: initialPayeeName, payeeAddress: initialPayeeAddress, payeeContact: initialPayeeContact,
-        bankName: initialBankName, accountNumber: initialAccountNumber, swiftBic: initialSwiftBic, iban: initialIban,
-        paymentDescription: initialPaymentDescription, paymentAmount: initialPaymentAmount, paymentCurrency: initialPaymentCurrency,
-        paymentMethods: Array.isArray(initialPaymentMethods) ? [...initialPaymentMethods] : [], // For checkboxes
-        paymentInvoiceRef: initialPaymentInvoiceRef,
-        signatureData: initialSignatureData, // For the signature input field
-
-        isSaving: false,
-        isDownloadingExcel: false,
-
-        init() {
-            if (this.isEdit) {
-                console.log('Request for Payment Form loaded in EDIT mode for document ID:', this.docId);
-            } else {
-                console.log('Request for Payment Form loaded in CREATE mode.');
-                if (!this.documentTitle.trim() && (this.employeeName.trim() || this.dateFiled.trim())) {
-                    this.documentTitle = `RFP - ${this.employeeName.trim() || 'Request'} - ${this.dateFiled}`;
-                }
-                if (this.referenceNo === 'RFPF-') {
-                    this.referenceNo = 'RFPF-' + Date.now().toString().slice(-6);
-                }
-            }
-        },
-
-        submitFormPrompt() {
-            if (this.isEdit) return this.updateDocument();
-            if (!this.documentTitle.trim()) {
-                const suggestedName = `RFP - ${this.employeeName.trim() || 'N/A'} - ${this.dateFiled}`;
-                const title = prompt("Please enter a name for this document (for saving):", suggestedName);
-                if (title === null || title.trim() === "") {
-                    alert("Save cancelled. Document name is required."); return;
-                }
-                this.documentTitle = title.trim();
-            }
-            this.saveNewDocument();
-        },
-
-        async saveOrUpdate(isUpdate = false) {
-            this.isSaving = true;
-            const formFieldsPayload = {
-                employee_name: this.employeeName, employee_num: this.employeeNum, department: this.department, position: this.position,
-                date_filed: this.dateFiled, reference_no: this.referenceNo,
-                payee_name: this.payeeName, payee_address: this.payeeAddress, payee_contact: this.payeeContact,
-                bank_name: this.bankName, account_number: this.accountNumber, swift_bic: this.swiftBic, iban: this.iban,
-                payment_description: this.paymentDescription, payment_amount: this.paymentAmount, payment_currency: this.paymentCurrency,
-                payment_methods: this.paymentMethods, // Array of selected checkbox values
-                payment_invoice_ref: this.paymentInvoiceRef,
-                signature_data: this.signatureData,
-            };
-
-            const documentRecordPayload = {
-                document_name: this.documentTitle,
-                document_type: 'request_for_payment', // Crucial identifier
-                recipient: this.payeeName || this.employeeName || null, // Primary recipient
-                status: 'draft',
-                data: formFieldsPayload
-            };
-
-            let url = '{{ route("documents.store") }}';
-            if (isUpdate && this.docId) {
-                url = `/documents/${this.docId}`;
-                documentRecordPayload._method = 'PUT';
-            } else if (isUpdate && !this.docId) {
-                alert("Error: Cannot update document without a Document ID.");
-                this.isSaving = false; return;
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { /* CSRF, Content-Type, Accept */
-                        'Content-Type': 'application/json', 'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(documentRecordPayload)
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message || `Request for Payment ${isUpdate ? 'updated' : 'saved'} successfully!`);
-                    const redirectUrl = (isUpdate && this.docId) ? `/documents/${this.docId}` :
-                                     ((result.document && result.document.id) ? `/documents/${result.document.id}` : '{{ route("documents.index") }}');
-                    window.location.href = redirectUrl;
-                } else { /* Error handling */
-                    let errorMsg = result.message || `Error ${isUpdate ? 'updating' : 'saving'} document.`;
-                    if (result.errors) errorMsg += "\nDetails:\n" + Object.values(result.errors).flat().join("\n");
-                    alert(errorMsg);
-                }
-            } catch (error) { /* Network/script error handling */
-                 console.error(`Error during ${isUpdate ? 'update' : 'save'}:`, error);
-                 alert(`Operation failed due to a network or script error. Check console.`);
-            } finally { this.isSaving = false; }
-        },
-
-        saveNewDocument() { this.saveOrUpdate(false); },
-        updateDocument() { this.saveOrUpdate(true); },
-
-        async downloadRequestForPaymentExcel() {
-            this.isDownloadingExcel = true;
-            const formDataForExcel = { // Collect all data from Alpine component
-                document_title_for_excel: this.documentTitle,
-                employee_name: this.employeeName, employee_num: this.employeeNum, department: this.department, position: this.position,
-                date_filed: this.dateFiled, reference_no: this.referenceNo,
-                payee_name: this.payeeName, payee_address: this.payeeAddress, payee_contact: this.payeeContact,
-                bank_name: this.bankName, account_number: this.accountNumber, swift_bic: this.swiftBic, iban: this.iban,
-                payment_description: this.paymentDescription, payment_amount: this.paymentAmount, payment_currency: this.paymentCurrency,
-                payment_methods: this.paymentMethods, payment_invoice_ref: this.paymentInvoiceRef,
-                signature_data: this.signatureData,
-            };
-
-            try {
-                // YOU WILL NEED TO CREATE THIS ROUTE AND CONTROLLER METHOD:
-                const response = await fetch('{{ route("forms.request-for-payment.download.excel") }}', {
-                    method: 'POST',
-                    headers: { /* CSRF, Content-Type */
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(formDataForExcel)
-                });
-                if (response.ok) { /* Blob download logic */
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none'; a.href = url;
-                    const disposition = response.headers.get('content-disposition');
-                    let filename = 'Request_For_Payment.xlsx';
-                    if (disposition && disposition.indexOf('attachment') !== -1) {
-                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                        const matches = filenameRegex.exec(disposition);
-                        if (matches != null && matches[1]) filename = matches[1].replace(/['"]/g, '');
-                    }
-                    a.download = filename; document.body.appendChild(a); a.click();
-                    window.URL.revokeObjectURL(url); a.remove();
-                } else { /* Error handling */
-                    const errorData = await response.json().catch(() => ({ message: `Server error: ${response.statusText}` }));
-                    alert('Error generating Request for Payment Excel: ' + (errorData.message || 'Unknown server error'));
-                }
-            } catch (error) { /* Network/script error handling */
-                 console.error('Error during Request for Payment Excel download:', error);
-                 alert('Network error or script issue during Excel download.');
-            } finally { this.isDownloadingExcel = false; }
-        }
-    }
-}
-</script>
 
 </body>
 </html>

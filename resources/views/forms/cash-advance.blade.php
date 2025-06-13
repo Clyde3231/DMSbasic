@@ -39,6 +39,7 @@
 
 @section('content')
 <!DOCTYPE html>
+{{-- Updated x-data call to use the global function and pass URLs --}}
 <html lang="en" x-data="cashAdvanceForm(
     {{ $isEditMode ? 'true' : 'false' }},
     {{ $initialDocumentId ?? 'null' }},
@@ -52,7 +53,11 @@
     {{ $initialItemsJson }},
     '{{ addslashes($initialSignature) }}',
     '{{ $initialReleasedDate }}',
-    '{{ addslashes($initialReceivedBy) }}'
+    '{{ addslashes($initialReceivedBy) }}',
+    // Pass URLs:
+    '{{ route("forms.cash-advance.download.excel") }}', {{-- ENSURE THIS ROUTE EXISTS --}}
+    '{{ route("documents.store") }}',
+    '{{ route("documents.index") }}'
 )" x-cloak>
 <head>
     <meta charset="UTF-8" />
@@ -193,201 +198,6 @@
                 </div>
             </div>
         </div>
-
-  
-
-<script>
-function cashAdvanceForm(
-    isEditMode = false,
-    documentId = null,
-    initialDocTitle = '',
-    initialEmployeeName = '',
-    initialEmployeeNum = '',
-    initialDepartment = '',
-    initialPosition = '',
-    initialDateFiled = new Date().toISOString().slice(0,10),
-    initialReferenceNo = 'CA-', // Base for new ref no
-    initialItemsData = [{ amount: '', details: '' }],
-    initialSignature = '',
-    initialReleasedDate = '',
-    initialReceivedBy = ''
-) {
-    return {
-        isEdit: isEditMode,
-        docId: documentId,
-        documentTitle: initialDocTitle,
-        employeeName: initialEmployeeName,
-        employeeNum: initialEmployeeNum,
-        department: initialDepartment,
-        position: initialPosition,
-        dateFiled: initialDateFiled,
-        referenceNo: initialReferenceNo,
-        items: (Array.isArray(initialItemsData) && initialItemsData.length > 0) ? JSON.parse(JSON.stringify(initialItemsData)) : [{ amount: '', details: '' }],
-        signatureData: initialSignature,
-        releasedDate: initialReleasedDate,
-        receivedBy: initialReceivedBy,
-
-        isSaving: false,
-        isDownloadingExcel: false,
-
-        init() {
-            if (this.isEdit) {
-                console.log('Cash Advance Form loaded in EDIT mode for document ID:', this.docId);
-            } else {
-                console.log('Cash Advance Form loaded in CREATE mode.');
-                // Auto-suggest title for new CA forms
-                if (!this.documentTitle.trim() && (this.employeeName.trim() || this.dateFiled.trim())) {
-                    this.documentTitle = `CA - ${this.employeeName.trim() || 'Employee'} - ${this.dateFiled}`;
-                }
-                // Generate a more unique reference number for new forms client-side (backend should verify/finalize)
-                if (this.referenceNo === 'CA-') {
-                    this.referenceNo = 'CA-' + Date.now().toString().slice(-6);
-                }
-            }
-        },
-
-        submitFormPrompt() {
-            if (this.isEdit) return this.updateDocument(); // Should be called by 'UPDATE' button directly
-
-            if (!this.documentTitle.trim()) {
-                const suggestedName = `CA - ${this.employeeName.trim() || 'N/A'} - ${this.dateFiled}`;
-                const title = prompt("Please enter a name for this document (for saving):", suggestedName);
-                if (title === null || title.trim() === "") {
-                    alert("Save cancelled. Document name is required."); return;
-                }
-                this.documentTitle = title.trim();
-            }
-            this.saveNewDocument();
-        },
-
-        async saveOrUpdate(isUpdate = false) {
-            this.isSaving = true;
-            const formFieldsPayload = { // Data for the JSON 'data' column
-                employee_name: this.employeeName,
-                employee_num: this.employeeNum,
-                department: this.department,
-                position: this.position,
-                date_filed: this.dateFiled,
-                reference_no: this.referenceNo,
-                items: this.items.filter(item => item.amount || item.details), // Filter out empty item rows
-                signature_data: this.signatureData,
-                released_date: this.releasedDate,
-                received_by: this.receivedBy,
-            };
-
-            const documentRecordPayload = {
-                document_name: this.documentTitle,
-                document_type: 'cash_advance',
-                recipient: this.employeeName || null,
-                status: 'draft',
-                data: formFieldsPayload
-            };
-
-            let url = '{{ route("documents.store") }}';
-            let fetchMethod = 'POST';
-
-            if (isUpdate && this.docId) {
-                url = `/documents/${this.docId}`;
-                documentRecordPayload._method = 'PUT'; // Laravel handles this with POST
-            } else if (isUpdate && !this.docId) {
-                alert("Error: Cannot update document without a Document ID.");
-                this.isSaving = false;
-                return;
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST', // Always POST, _method handles PUT for updates
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(documentRecordPayload)
-                });
-                const result = await response.json();
-
-                if (response.ok) {
-                    alert(result.message || `Document ${isUpdate ? 'updated' : 'saved'} successfully!`);
-                    if (isUpdate && this.docId) {
-                        window.location.href = `/documents/${this.docId}`; // Redirect to show page
-                    } else if (result.document && result.document.id) { // For new documents, redirect to its show page
-                        window.location.href = `/documents/${result.document.id}`;
-                    } else {
-                        window.location.href = '{{ route("documents.index") }}';
-                    }
-                } else {
-                    let errorMsg = `Error ${isUpdate ? 'updating' : 'saving'} document.`;
-                    if (result.message) errorMsg = result.message;
-                    if (result.errors) {
-                        errorMsg += "\nDetails:\n" + Object.values(result.errors).flat().join("\n");
-                    } else if (response.statusText) {
-                        errorMsg += ` (${response.statusText})`;
-                    }
-                    alert(errorMsg);
-                }
-            } catch (error) {
-                console.error(`Error during ${isUpdate ? 'update' : 'save'}:`, error);
-                alert(`Operation failed due to a network or script error. Check console.`);
-            } finally {
-                this.isSaving = false;
-            }
-        },
-
-        saveNewDocument() { this.saveOrUpdate(false); },
-        updateDocument() { this.saveOrUpdate(true); },
-
-        async downloadCashAdvanceExcel() {
-            this.isDownloadingExcel = true;
-            const formDataForExcel = {
-                employee_name: this.employeeName, employee_num: this.employeeNum,
-                department: this.department, position: this.position,
-                date_filed: this.dateFiled, reference_no: this.referenceNo,
-                items: this.items, signature_data: this.signatureData,
-                released_date: this.releasedDate, received_by: this.receivedBy,
-                // Pass documentTitle as well if your Excel template needs it directly
-                document_title_for_excel: this.documentTitle
-            };
-
-            try {
-                // YOU WILL NEED TO CREATE THIS ROUTE AND CONTROLLER METHOD
-                const response = await fetch('{{ route("forms.cash-advance.download.excel") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(formDataForExcel)
-                });
-
-                if (response.ok) { /* ... (blob download logic from pullout form) ... */
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none'; a.href = url;
-                    const disposition = response.headers.get('content-disposition');
-                    let filename = 'Cash_Advance_Form.xlsx';
-                    if (disposition && disposition.indexOf('attachment') !== -1) {
-                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                        const matches = filenameRegex.exec(disposition);
-                        if (matches != null && matches[1]) filename = matches[1].replace(/['"]/g, '');
-                    }
-                    a.download = filename; document.body.appendChild(a); a.click();
-                    window.URL.revokeObjectURL(url); a.remove();
-                } else {
-                    const errorData = await response.json().catch(() => ({ message: `Server error: ${response.statusText}` }));
-                    alert('Error generating Cash Advance Excel: ' + (errorData.message || 'Unknown server error'));
-                }
-            } catch (error) {
-                console.error('Error during Cash Advance Excel download:', error);
-                alert('Network error or script issue during Excel download.');
-            } finally {
-                this.isDownloadingExcel = false;
-            }
-        }
-    }
-}
-</script>
 
 </body>
 </html>

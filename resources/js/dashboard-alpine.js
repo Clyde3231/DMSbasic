@@ -44,7 +44,7 @@ export function documentDashboard() {
                 case 'cash_advance':
                     downloadUrl = `/documents/${docId}/download-cash-advance`; // Example route
                     break;
-                case 'purchase_request':
+                case 'purchase-request':
                     downloadUrl = `/documents/${docId}/download-purchase-request`; // Example route
                     break;
                 case 'request_for_payment':
