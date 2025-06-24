@@ -16,6 +16,8 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id')->nullable(); // To link to the user who created it
             $table->string('document_name');
             $table->string('document_type'); // e.g., 'purchase_request', 'pull_out_receipt'
+            $table->string('form_code')->nullable();    // NEW
+            $table->string('ref_no')->nullable();       // NEW
             $table->string('recipient')->nullable();
             $table->string('status')->default('draft'); // e.g., 'draft', 'sent', 'signed', 'archived'
             $table->json('data')->nullable(); // To store the form's field values as JSON
