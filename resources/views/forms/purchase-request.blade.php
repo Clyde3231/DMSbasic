@@ -34,6 +34,7 @@
 
 @section('content')
 <!DOCTYPE html>
+{{-- Updated x-data call to use the global function and pass URLs --}}
 <html lang="en" x-data="purchaseRequestForm(
     {{ $isEditMode ? 'true' : 'false' }},
     {{ $initialDocumentId ?? 'null' }},
@@ -48,8 +49,13 @@
     '{{ addslashes($initialPurpose) }}',
     '{{ addslashes($initialRequestedBySignature) }}',
     '{{ addslashes($initialDepartmentBottom) }}',
-    '{{ $initialDateBottom }}'
+    '{{ $initialDateBottom }}',
+    // Pass URLs:
+    '{{ route("forms.purchase-request.download.excel") }}', {{-- ENSURE THIS ROUTE EXISTS --}}
+    '{{ route("documents.store") }}',
+    '{{ route("documents.index") }}'
 )" x-cloak>
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -196,205 +202,7 @@
         </div>
 
     
-
-<script>
-function purchaseRequestForm(
-    isEditMode = false,
-    documentId = null,
-    initialDocTitle = '',
-    initialEmployeeName = '',
-    initialEmployeeNum = '',
-    initialDepartmentTop = '',
-    initialPosition = '',
-    initialDateFiled = new Date().toISOString().slice(0,10),
-    initialReferenceNo = 'PRN-',
-    initialItemsData = [{ qty: null, description: '', unitPrice: null }],
-    initialPurpose = '',
-    initialRequestedBySignature = '',
-    initialDepartmentBottom = '',
-    initialDateBottom = new Date().toISOString().slice(0,10)
-) {
-    return {
-        isEdit: isEditMode,
-        docId: documentId,
-        documentTitle: initialDocTitle,
-        employeeName: initialEmployeeName,
-        employeeNum: initialEmployeeNum,
-        departmentTop: initialDepartmentTop,
-        position: initialPosition,
-        dateFiled: initialDateFiled,
-        referenceNo: initialReferenceNo,
-        items: (Array.isArray(initialItemsData) && initialItemsData.length > 0) ? JSON.parse(JSON.stringify(initialItemsData)) : [{ qty: null, description: '', unitPrice: null }],
-        purpose: initialPurpose,
-        requestedBySignature: initialRequestedBySignature,
-        departmentBottom: initialDepartmentBottom,
-        dateBottom: initialDateBottom,
-
-        isSaving: false,
-        isDownloadingExcel: false,
-
-        get overallTotalAmount() {
-            return this.items.reduce((sum, item) => {
-                const quantity = parseFloat(item.qty) || 0;
-                const price = parseFloat(item.unitPrice) || 0;
-                return sum + (quantity * price);
-            }, 0).toFixed(2);
-        },
-
-        addItem() {
-            this.items.push({ qty: null, description: '', unitPrice: null });
-        },
-        removeItem(index) {
-            if (this.items.length > 1) {
-                this.items.splice(index, 1);
-            }
-        },
-        calculateRowTotal(item) {
-            const quantity = parseFloat(item.qty) || 0;
-            const price = parseFloat(item.unitPrice) || 0;
-            return (quantity * price).toFixed(2);
-        },
-
-        init() {
-            if (this.isEdit) {
-                console.log('Purchase Request Form loaded in EDIT mode for document ID:', this.docId);
-            } else {
-                console.log('Purchase Request Form loaded in CREATE mode.');
-                if (!this.documentTitle.trim() && (this.employeeName.trim() || this.dateFiled.trim())) {
-                    this.documentTitle = `PR - ${this.employeeName.trim() || 'Request'} - ${this.dateFiled}`;
-                }
-                if (this.referenceNo === 'PRN-') {
-                    this.referenceNo = 'PRN-' + Date.now().toString().slice(-6);
-                }
-            }
-        },
-
-        submitFormPrompt() {
-            if (this.isEdit) return this.updateDocument();
-
-            if (!this.documentTitle.trim()) {
-                const suggestedName = `PR - ${this.employeeName.trim() || 'N/A'} - ${this.dateFiled}`;
-                const title = prompt("Please enter a name for this document (for saving):", suggestedName);
-                if (title === null || title.trim() === "") {
-                    alert("Save cancelled. Document name is required."); return;
-                }
-                this.documentTitle = title.trim();
-            }
-            this.saveNewDocument();
-        },
-
-        async saveOrUpdate(isUpdate = false) {
-            this.isSaving = true;
-            const formFieldsPayload = { // Data for the JSON 'data' column
-                employee_name: this.employeeName,
-                employee_num: this.employeeNum,
-                department_top: this.departmentTop,
-                position: this.position,
-                date_filed: this.dateFiled,
-                reference_no: this.referenceNo,
-                items: this.items.filter(item => item.qty || item.description || item.unitPrice), // Filter out completely empty item rows
-                total_amount: this.overallTotalAmount, // Store calculated total
-                purpose: this.purpose,
-                requested_by_signature: this.requestedBySignature,
-                department_bottom: this.departmentBottom,
-                date_bottom: this.dateBottom,
-            };
-
-            const documentRecordPayload = {
-                document_name: this.documentTitle,
-                document_type: 'purchase_request', // Crucial for identifying the form
-                recipient: this.employeeName || null, // Or relevant department
-                status: 'draft',
-                data: formFieldsPayload
-            };
-
-            let url = '{{ route("documents.store") }}';
-            if (isUpdate && this.docId) {
-                url = `/documents/${this.docId}`;
-                documentRecordPayload._method = 'PUT';
-            } else if (isUpdate && !this.docId) {
-                alert("Error: Cannot update document without a Document ID.");
-                this.isSaving = false; return;
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { /* ... CSRF, Content-Type, Accept ... */
-                        'Content-Type': 'application/json', 'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(documentRecordPayload)
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message || `Purchase Request ${isUpdate ? 'updated' : 'saved'} successfully!`);
-                    const redirectUrl = (isUpdate && this.docId) ? `/documents/${this.docId}` :
-                                     ((result.document && result.document.id) ? `/documents/${result.document.id}` : '{{ route("documents.index") }}');
-                    window.location.href = redirectUrl;
-                } else { /* ... error handling ... */
-                    let errorMsg = result.message || `Error ${isUpdate ? 'updating' : 'saving'} document.`;
-                    if (result.errors) errorMsg += "\nDetails:\n" + Object.values(result.errors).flat().join("\n");
-                    alert(errorMsg);
-                }
-            } catch (error) { /* ... error handling ... */
-                 console.error(`Error during ${isUpdate ? 'update' : 'save'}:`, error);
-                 alert(`Operation failed due to a network or script error. Check console.`);
-            } finally { this.isSaving = false; }
-        },
-
-        saveNewDocument() { this.saveOrUpdate(false); },
-        updateDocument() { this.saveOrUpdate(true); },
-
-        async downloadPurchaseRequestExcel() {
-            this.isDownloadingExcel = true;
-            const formDataForExcel = {
-                employee_name: this.employeeName, employee_num: this.employeeNum,
-                department_top: this.departmentTop, position: this.position,
-                date_filed: this.dateFiled, reference_no: this.referenceNo,
-                items: this.items, overall_total_amount: this.overallTotalAmount,
-                purpose: this.purpose, requested_by_signature: this.requestedBySignature,
-                department_bottom: this.departmentBottom, date_bottom: this.dateBottom,
-                document_title_for_excel: this.documentTitle
-            };
-
-            try {
-                // YOU WILL NEED TO CREATE THIS ROUTE AND CONTROLLER METHOD:
-                const response = await fetch('{{ route("forms.purchase-request.download.excel") }}', {
-                    method: 'POST',
-                    headers: { /* ... CSRF, Content-Type ... */
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(formDataForExcel)
-                });
-                if (response.ok) { /* ... blob download logic ... */
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none'; a.href = url;
-                    const disposition = response.headers.get('content-disposition');
-                    let filename = 'Purchase_Request.xlsx';
-                    if (disposition && disposition.indexOf('attachment') !== -1) {
-                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                        const matches = filenameRegex.exec(disposition);
-                        if (matches != null && matches[1]) filename = matches[1].replace(/['"]/g, '');
-                    }
-                    a.download = filename; document.body.appendChild(a); a.click();
-                    window.URL.revokeObjectURL(url); a.remove();
-                } else { /* ... error handling ... */
-                    const errorData = await response.json().catch(() => ({ message: `Server error: ${response.statusText}` }));
-                    alert('Error generating Purchase Request Excel: ' + (errorData.message || 'Unknown server error'));
-                }
-            } catch (error) { /* ... error handling ... */
-                 console.error('Error during Purchase Request Excel download:', error);
-                 alert('Network error or script issue during Excel download.');
-            } finally { this.isDownloadingExcel = false; }
-        }
-    }
-}
-</script>
-
-</body>
+    </body>
 </html>
+
 @endsection
