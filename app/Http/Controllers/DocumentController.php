@@ -53,31 +53,20 @@ public function index(Request $request)
         // Users will go directly to specific form types like /forms/pullout
         // So, we can redirect or leave this empty for now.
         return redirect()->route('documents.index')->with('info', 'Please select a document type to create.');
-    }
+    }   
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        // Validate the incoming request
         $validatedData = $request->validate([
-            // --- Fields for the 'documents' table itself ---
             'document_name' => 'required|string|max:255',
-            'document_type' => 'required|string|in:pull_out_receipt,purchase_request,cash_advance,reimbursement', // Add all your types
+            // Add 'reimbursement' to the 'in' validation rule
+            'document_type' => 'required|string|in:pull_out_receipt,purchase_request,cash_advance,reimbursement,request_for_payment,acknowledgement_receipt',
             'recipient' => 'nullable|string|max:255',
-            'status' => 'nullable|string|in:draft,sent,signed', // Default is 'draft' in migration
-
-            // --- The actual form data ---
-            // 'data' will contain the JSON payload from Alpine.js
-            // We expect 'data' to be an array (which will be cast to JSON by the model)
+            'status' => 'nullable|string|in:draft,sent,signed,archived', // Added archived
             'data' => 'required|array',
-            'data.client' => 'nullable|string', // Example: if 'pull_out_receipt'
-            'data.address' => 'nullable|string',
-            'data.items' => 'nullable|array',
-            // Add more specific validation for 'data' sub-fields if needed,
-            // possibly based on 'document_type'. This can get complex.
-            // For now, 'data' => 'required|array' is a good start.
         ]);
 
         $document = new Document();
@@ -117,6 +106,10 @@ public function show(Document $document)
     $viewName = match ($documentType) {
         'pull_out_receipt' => 'forms.pullout',
         'purchase_request' => 'forms.purchase-request',
+        'cash_advance' => 'forms.cash-advance',
+        'reimbursement' => 'forms.reimbursement',
+        'request_for_payment' => 'forms.request-payment',
+        'acknowledgement_receipt' => 'forms.acknowledgement-receipt',
         // ... other cases
         default => null,
     };
@@ -161,22 +154,44 @@ public function show(Document $document)
             'purchase_request' => 'forms.purchase-request',
             'cash_advance' => 'forms.cash-advance',
             'reimbursement' => 'forms.reimbursement',
-            // Add all your document types
+            'request_for_payment' => 'forms.request-payment',
+            'acknowledgement_receipt' => 'forms.acknowledgement-receipt',
+            // Add all your document types]
             default => null,
         };
 
         if (!$viewName || !View::exists($viewName)) {
-            abort(404, "Edit template for document type '{$documentType}' not found.");
+            Log::warning("Preview/Show template for document type '{$documentType}' (ID: {$document->id}) not found or not mapped.");
+            abort(404, "Display view for document type '{$documentType}' is not configured.");
         }
 
         return view($viewName, [
-            'documentRecord' => $document,      // Pass the whole document model
-            'documentData' => $formData,        // Pass the specific form field data
-            'isEditMode' => true,               // Flag to indicate edit mode
-            // 'isPreviewMode' => false,        // Explicitly set if your view checks this
+            'documentData'   => $formData,
+            'documentRecord' => $document,
+            'isPreviewMode'  => false,
+            'isEditMode'     => true,
         ]);
     }
 
+// In app/Http/Controllers/DocumentController.php
+// In app/Http/Controllers/DocumentController.php
+public function updateStatus(Request $request, Document $document)
+{
+    $validated = $request->validate([
+        'status' => 'required|string|in:draft,sent,signed,archived', // Add all your valid statuses
+    ]);
+
+    // Optional: Add authorization logic here if needed
+
+    $document->status = $validated['status'];
+    $document->save();
+
+    return response()->json([
+        'message' => 'Document status updated successfully!',
+        'new_status' => $document->status,
+        'document' => $document->fresh() // Send back the updated document
+    ]);
+}
     /**
      * Update the specified resource in storage.
      */
@@ -225,3 +240,5 @@ public function show(Document $document)
         return redirect()->route('documents.index')->with('success', 'Document deleted successfully!');
     }
 }
+
+
